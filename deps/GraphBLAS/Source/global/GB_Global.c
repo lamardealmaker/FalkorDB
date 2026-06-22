@@ -7,11 +7,17 @@
 
 //------------------------------------------------------------------------------
 
-// All Global storage is declared, initialized, and accessed here.  The
+// Most global variables are declared, initialized, and accessed here.  The
 // contents of the GB_Global struct are only accessible to functions in this
 // file.  Global storage is used to keep track of the GraphBLAS mode (blocking
 // or non-blocking), for pointers to malloc/realloc/free functions,
 // global matrix options, and other settings.
+
+// The locations of global variables in GraphBLAS are:
+// GraphBLAS/Source/global/GB_Global.c:  this file
+// GraphBLAS/Source/jitifyer/GB_jitifyer.c:  JIT settings and the JIT cache
+//      of loaded lib*.so kernels.
+// GraphBLAS/CUDA/
 
 #include "GB.h"
 #include "include/GB_unused.h"
@@ -580,7 +586,7 @@ void GB_Global_memtable_add (void *p, size_t size)
     #ifdef GB_DEBUG
     bool fail = false ;
     GBMDUMP ("memtable add %p size %ld\n", p, size) ;
-    GB_OPENMP_LOCK_SET (3)
+    GB_OPENMP_LOCK_SET (3)  // memtable (debug only)
     {
         int n = GB_Global.nmemtable ;
         fail = (n > GB_MEMTABLE_SIZE) ;
@@ -604,7 +610,7 @@ void GB_Global_memtable_add (void *p, size_t size)
             GB_Global.nmemtable++ ;
         }
     }
-    GB_OPENMP_LOCK_UNSET (3)
+    GB_OPENMP_LOCK_UNSET (3)    // memtable (debug only)
     ASSERT (!fail) ;
     GB_Global_memtable_dump ( ) ;
     #endif
@@ -618,7 +624,7 @@ size_t GB_Global_memtable_size (void *p)
     #ifdef GB_DEBUG
     if (p == NULL) return (0) ;
     bool found = false ;
-    GB_OPENMP_LOCK_SET (3)
+    GB_OPENMP_LOCK_SET (3)  // memtable (debug only)
     {
         int n = GB_Global.nmemtable ;
         for (int i = 0 ; i < n ; i++)
@@ -631,7 +637,7 @@ size_t GB_Global_memtable_size (void *p)
             }
         }
     }
-    GB_OPENMP_LOCK_UNSET (3)
+    GB_OPENMP_LOCK_UNSET (3)    // memtable (debug only)
     if (!found)
     {
         GBDUMP ("\nFAIL: %p not found\n", p) ;
@@ -650,7 +656,7 @@ bool GB_Global_memtable_find (void *p)
 
     #ifdef GB_DEBUG
     if (p == NULL) return (false) ;
-    GB_OPENMP_LOCK_SET (3)
+    GB_OPENMP_LOCK_SET (3)  // memtable (debug only)
     {
         int n = GB_Global.nmemtable ;
         for (int i = 0 ; i < n ; i++)
@@ -662,7 +668,7 @@ bool GB_Global_memtable_find (void *p)
             }
         }
     }
-    GB_OPENMP_LOCK_UNSET (3)
+    GB_OPENMP_LOCK_UNSET (3)    // memtable (debug only)
     #endif
 
     return (found) ;
@@ -681,7 +687,7 @@ void GB_Global_memtable_remove (void *p)
     #ifdef GB_DEBUG
     bool found = false ;
     GBMDUMP ("memtable remove %p ", p) ;
-    GB_OPENMP_LOCK_SET (3)
+    GB_OPENMP_LOCK_SET (3)  // memtable (debug only)
     {
         int n = GB_Global.nmemtable ;
         for (int i = 0 ; i < n ; i++)
@@ -697,7 +703,7 @@ void GB_Global_memtable_remove (void *p)
             }
         }
     }
-    GB_OPENMP_LOCK_UNSET (3)
+    GB_OPENMP_LOCK_UNSET (3)    // memtable (debug only)
     if (!found)
     {
         GBDUMP ("remove %p NOT FOUND\n", p) ;
@@ -734,11 +740,11 @@ void * GB_Global_malloc_function (size_t size)
     }
     else
     {
-        GB_OPENMP_LOCK_SET (2)
+        GB_OPENMP_LOCK_SET (2)   // for non-thread-safe malloc
         {
             p = GB_Global.malloc_function (size) ;
         }
-        GB_OPENMP_LOCK_UNSET (2)
+        GB_OPENMP_LOCK_UNSET (2) // for non-thread-safe malloc
     }
     GB_Global_memtable_add (p, size) ;
     return (p) ;
@@ -789,11 +795,11 @@ void * GB_Global_realloc_function (void *p, size_t size)
     }
     else
     {
-        GB_OPENMP_LOCK_SET (2)
+        GB_OPENMP_LOCK_SET (2)   // for non-thread-safe malloc
         {
             pnew = GB_Global.realloc_function (p, size) ;
         }
-        GB_OPENMP_LOCK_UNSET (2)
+        GB_OPENMP_LOCK_UNSET (2) // for non-thread-safe malloc
     }
     if (pnew != NULL)
     {
@@ -825,11 +831,11 @@ void GB_Global_free_function (void *p)
     }
     else
     {
-        GB_OPENMP_LOCK_SET (2)
+        GB_OPENMP_LOCK_SET (2)   // for non-thread-safe malloc
         {
             GB_Global.free_function (p) ;
         }
-        GB_OPENMP_LOCK_UNSET (2)
+        GB_OPENMP_LOCK_UNSET (2) // for non-thread-safe malloc
     }
     GB_Global_memtable_remove (p) ;
 }
@@ -1040,7 +1046,7 @@ bool GB_Global_stats_mem_shallow_get (void)
 // CUDA
 //------------------------------------------------------------------------------
 
-bool GB_Global_gpu_count_set (bool enable_cuda)
+void GB_Global_gpu_count_set (bool enable_cuda)
 { 
     // set the # of GPUs in the system;
     // this function is only called once, by GB_init.
@@ -1049,14 +1055,13 @@ bool GB_Global_gpu_count_set (bool enable_cuda)
     #if defined ( GRAPHBLAS_HAS_CUDA )
     if (enable_cuda)
     {
-        return (GB_cuda_get_device_count (&GB_Global.gpu_count)) ;
+        GB_Global.gpu_count = GB_cuda_get_device_count ( ) ;
     }
     else
     #endif
     {
         // no GPUs available, or available but not requested
         GB_Global.gpu_count = 0 ;
-        return (true) ;
     }
 }
 
@@ -1231,5 +1236,12 @@ void GB_Global_lock_unset (int k)
         omp_unset_lock (&(GB_Global.lock [k])) ;
     }
     #endif
+}
+
+void GB_Global_lock_wipe (void)
+{
+    // disable (but do not destroy) all locks
+    memset (GB_Global.lock, 0, GB_GLOBAL_NLOCKS * sizeof (GB_OPENMP_LOCK_T)) ;
+    memset (GB_Global.lock_is_created, 0, GB_GLOBAL_NLOCKS * sizeof (bool)) ;
 }
 
