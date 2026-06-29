@@ -88,9 +88,13 @@ static void _Graph_Memory
 	//    }
 	//
 	//    indices_sz_mb: <indices_sz_mb>
+	//
+	//    total_node_attributes_sz_mb: <total_node_attributes_sz_mb>
+	//
+	//    total_edge_attributes_sz_mb: <total_edge_attributes_sz_mb>
 	// }
 
-	RedisModule_ReplyWithMap (rm_ctx, 9) ;
+	RedisModule_ReplyWithMap (rm_ctx, 11) ;
 
 	// total_graph_sz_mb
 	RedisModule_ReplyWithCString  (rm_ctx, "total_graph_sz_mb") ;
@@ -142,6 +146,14 @@ static void _Graph_Memory
 	// indices_sz_mb
 	RedisModule_ReplyWithCString  (rm_ctx, "indices_sz_mb") ;
 	RedisModule_ReplyWithLongLong (rm_ctx, result.indices_sz) ;
+
+	// total_node_attributes_sz_mb
+	RedisModule_ReplyWithCString  (rm_ctx, "total_node_attributes_sz_mb") ;
+	RedisModule_ReplyWithLongLong (rm_ctx, result.total_node_attr_sz) ;
+
+	// total_edge_attributes_sz_mb
+	RedisModule_ReplyWithCString  (rm_ctx, "total_edge_attributes_sz_mb") ;
+	RedisModule_ReplyWithLongLong (rm_ctx, result.total_edge_attr_sz) ;
 
 	// counter to GraphContext_Retrieve
 	// held until here so schema name lookups above are not use-after-free
@@ -242,3 +254,4 @@ int Graph_Memory
 
 	return REDISMODULE_OK ;
 }
+
