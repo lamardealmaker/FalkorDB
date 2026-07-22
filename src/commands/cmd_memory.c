@@ -96,7 +96,7 @@ static void _Graph_Memory
 	RedisModule_ReplyWithCString  (rm_ctx, "amortized_node_block_sz_mb") ;
 	RedisModule_ReplyWithLongLong (rm_ctx, result.node_block_storage_sz) ;
 
-	// amortized_node_by_label_sz_mb
+	// amortized_node_attributes_sz_mb
 	RedisModule_ReplyWithCString (rm_ctx, "amortized_node_attributes_sz_mb") ;
 	RedisModule_ReplyWithLongLong (rm_ctx, result.node_attr_sz) ;
 
@@ -104,7 +104,7 @@ static void _Graph_Memory
 	RedisModule_ReplyWithCString  (rm_ctx, "amortized_edge_block_sz_mb") ;
 	RedisModule_ReplyWithLongLong (rm_ctx, result.edge_block_storage_sz) ;
 
-	// amortized_edge_attributes_by_type_sz_mb
+	// amortized_edge_attributes_sz_mb
 	RedisModule_ReplyWithCString (rm_ctx, "amortized_edge_attributes_sz_mb") ;
 	RedisModule_ReplyWithLongLong (rm_ctx, result.edge_attr_sz) ;
 
